@@ -49,7 +49,8 @@ async function run() {
     // await client.connect();
 
     const studentCollection = client.db('KalnaMadrasha').collection('students')
-    // const usersCollection = client.db('doctorServiceBD').collection('users')
+    const teacherCollection = client.db('KalnaMadrasha').collection('teachers')
+    const committeeCollection = client.db('KalnaMadrasha').collection('committee')
 
     app.post('/poststudent',async(req,res)=>{
       const request=req.body;
@@ -58,6 +59,18 @@ async function run() {
       res.send(result)
     })
 
+    app.post('/postteacher',async(req,res)=>{
+      const request=req.body;
+      console.log(request);
+      const result=await teacherCollection.insertOne(request)
+      res.send(result)
+    })
+    app.post('/postcommittee',async(req,res)=>{
+      const request=req.body;
+      console.log(request);
+      const result=await committeeCollection.insertOne(request)
+      res.send(result)
+    })
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
