@@ -5,6 +5,10 @@ const port = process.env.PORT || 5000;
 const cors = require('cors');
 require('dotenv').config()
 const jwt = require('jsonwebtoken')
+const multer = require('multer');
+const path = require('path')
+const fs = require('fs')
+
 
 
 
@@ -42,6 +46,17 @@ const client = new MongoClient(uri, {
     deprecationErrors: true,
   }
 });
+// Multer configuration
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/'); // Specify the directory where images will be stored
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + '-' + file.originalname); // Set a unique filename
+  },
+});
+
+const upload = multer({ storage });
 
 async function run() {
   try {
@@ -51,25 +66,103 @@ async function run() {
     const studentCollection = client.db('KalnaMadrasha').collection('students')
     const teacherCollection = client.db('KalnaMadrasha').collection('teachers')
     const committeeCollection = client.db('KalnaMadrasha').collection('committee')
+    const routineCollection = client.db('KalnaMadrasha').collection('routines')
 
-    app.post('/poststudent',async(req,res)=>{
-      const request=req.body;
-      console.log(request);
-      const result=await studentCollection.insertOne(request)
-      res.send(result)
-    })
+    // Post Sudent
+    app.post('/poststudent', upload.single('image'), async (req, res) => {
+      const requestData = req.body;
+      const imagePath = req.file.path;
 
-    app.post('/postteacher',async(req,res)=>{
-      const request=req.body;
-      console.log(request);
-      const result=await teacherCollection.insertOne(request)
-      res.send(result)
+      // Save image path or URL along with other student data in MongoDB
+      const studentData = { ...requestData, imagePath };
+
+      try {
+        const result = await studentCollection.insertOne(studentData);
+        res.send(result);
+      } catch (error) {
+        console.error('Error adding student:', error);
+        res.status(500).send('Failed to add student. Please try again.');
+      }
+    });
+    // get student
+    app.get('/students', async (req, res) => {
+      const result = await studentCollection.find().toArray();
+      res.send(result);
     })
-    app.post('/postcommittee',async(req,res)=>{
-      const request=req.body;
-      console.log(request);
-      const result=await committeeCollection.insertOne(request)
-      res.send(result)
+    // Post Teacher
+    app.post('/postteacher', upload.single('image'), async (req, res) => {
+      const request = req.body;
+      const imagePath = req.file.path;
+      const teacherData = { ...request, imagePath }
+      try {
+        const result = await teacherCollection.insertOne(teacherData);
+        res.send(result)
+      } catch (error) {
+        console.error('Error adding student:', error);
+        res.status(500).send('Failed to add teacher. Please try again.');
+      }
+    })
+    // Get teachers
+    app.get('/teachers',async (req,res)=>{
+      try {
+        const result=await teacherCollection.find().toArray();
+        res.send(result)
+      } catch (error) {
+        res.status(200).send('Error to get teachers')
+      }
+    })
+    // Post Committee
+    app.post('/postcommittee',upload.single('image'), async (req, res) => {
+      const request = req.body;
+      const imagePath = req.file.path;
+      const teacherData = { ...request, imagePath }
+      try {
+        const result = await committeeCollection.insertOne(teacherData);
+        res.send(result);
+      } catch (error) {
+        console.error('Error adding student:', error);
+        res.status(500).send('Failed to add committe. Please try again.');
+      }
+
+    });
+
+    app.post('/postroutine', upload.single('image'), async (req, res) => {
+      try {
+        const file = req.file;
+
+        const result = await routineCollection.insertOne({
+          filename: file.filename,
+          path: file.path,
+        });
+        res.json({ success: true, message: 'Image uploaded successfully', fileId: result.insertedId });
+      } catch (error) {
+        console.error('Error uploading image:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+      }
+    });
+
+    app.get('/routines', async (req, res) => {
+      try {
+        const routines = await routineCollection.find().toArray();
+        res.json(routines);
+      } catch (error) {
+        console.error('Error retrieving routines:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+      }
+    });
+    // get image from database to show cliet side
+    app.get('/getimage', async (req, res) => {
+      try {
+        const imagePath = req.query.path;
+        console.log(imagePath)
+        const filepath = path.join(__dirname, "./" + imagePath)
+        const stream = fs.createReadStream(filepath)
+        stream.pipe(res)
+
+      } catch (error) {
+        console.error('Error retrieving routines:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+      }
     })
 
     // Send a ping to confirm a successful connection
