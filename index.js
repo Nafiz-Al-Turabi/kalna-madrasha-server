@@ -36,8 +36,6 @@ const verifyJWT = (req, res, next) => {
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.v94js04.mongodb.net/?retryWrites=true&w=majority`;
 
-// const uri = "mongodb+srv://doctorServiceBD:kgOP8NEZMZLVvQfg@cluster0.v94js04.mongodb.net/?retryWrites=true&w=majority";
-
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
   serverApi: {
@@ -88,6 +86,17 @@ async function run() {
     app.get('/students', async (req, res) => {
       const result = await studentCollection.find().toArray();
       res.send(result);
+    });
+    // Delete student
+    app.delete('/students/:id',async(req,res)=>{
+      try {
+        const id=req.params.id;
+        const deleteQuery={_id: new ObjectId(id)};
+        const result= await studentCollection.deleteOne(deleteQuery)
+        res.send(result) 
+      } catch (error) {
+        res.status(200).send('Failed to delete student')
+      }
     })
     // Post Teacher
     app.post('/postteacher', upload.single('image'), async (req, res) => {
@@ -103,16 +112,16 @@ async function run() {
       }
     })
     // Get teachers
-    app.get('/teachers',async (req,res)=>{
+    app.get('/teachers', async (req, res) => {
       try {
-        const result=await teacherCollection.find().toArray();
+        const result = await teacherCollection.find().toArray();
         res.send(result)
       } catch (error) {
         res.status(200).send('Error to get teachers')
       }
     })
     // Post Committee
-    app.post('/postcommittee',upload.single('image'), async (req, res) => {
+    app.post('/postcommittee', upload.single('image'), async (req, res) => {
       const request = req.body;
       const imagePath = req.file.path;
       const teacherData = { ...request, imagePath }
@@ -123,8 +132,17 @@ async function run() {
         console.error('Error adding student:', error);
         res.status(500).send('Failed to add committe. Please try again.');
       }
-
     });
+
+    // Get committee
+    app.get('/committes', async (req, res) => {
+      try {
+        const result=await committeeCollection.find().toArray();
+        res.send(result)
+      } catch (error) {
+        res.status(200).send('Error to get committees')
+      }
+    })
 
     app.post('/postroutine', upload.single('image'), async (req, res) => {
       try {
