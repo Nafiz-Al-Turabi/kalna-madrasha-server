@@ -88,12 +88,12 @@ async function run() {
       res.send(result);
     });
     // Delete student
-    app.delete('/students/:id',async(req,res)=>{
+    app.delete('/students/:id', async (req, res) => {
       try {
-        const id=req.params.id;
-        const deleteQuery={_id: new ObjectId(id)};
-        const result= await studentCollection.deleteOne(deleteQuery)
-        res.send(result) 
+        const id = req.params.id;
+        const deleteQuery = { _id: new ObjectId(id) };
+        const result = await studentCollection.deleteOne(deleteQuery)
+        res.send(result)
       } catch (error) {
         res.status(200).send('Failed to delete student')
       }
@@ -119,7 +119,18 @@ async function run() {
       } catch (error) {
         res.status(200).send('Error to get teachers')
       }
-    })
+    });
+    // Delete teacher
+    app.delete('/teachers/:id', async (req, res) => {
+      try {
+        const id = req.params.id;
+        const deleteQuery = { _id: new ObjectId(id) };
+        const result = await teacherCollection.deleteOne(deleteQuery);
+        res.send(result)
+      } catch (error) {
+        res.status(200).send('Failed to delete Teacher')
+      }
+    });
     // Post Committee
     app.post('/postcommittee', upload.single('image'), async (req, res) => {
       const request = req.body;
@@ -137,12 +148,23 @@ async function run() {
     // Get committee
     app.get('/committes', async (req, res) => {
       try {
-        const result=await committeeCollection.find().toArray();
+        const result = await committeeCollection.find().toArray();
         res.send(result)
       } catch (error) {
         res.status(200).send('Error to get committees')
       }
-    })
+    });
+    // Delete teacher
+    app.delete('/committes/:id', async (req, res) => {
+      try {
+        const id = req.params.id;
+        const deleteQuery = { _id: new ObjectId(id) };
+        const result = await committeeCollection.deleteOne(deleteQuery);
+        res.send(result)
+      } catch (error) {
+        res.status(200).send('Failed to delete Committe')
+      }
+    });
 
     app.post('/postroutine', upload.single('image'), async (req, res) => {
       try {
