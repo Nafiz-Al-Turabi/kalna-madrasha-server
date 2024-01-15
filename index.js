@@ -4,7 +4,6 @@ const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const port = process.env.PORT || 5000;
 const cors = require('cors');
 require('dotenv').config()
-const jwt = require('jsonwebtoken')
 const multer = require('multer');
 const path = require('path')
 const fs = require('fs')
@@ -16,23 +15,7 @@ app.use(cors())
 app.use(express.json())
 
 
-// verify JWT
-const verifyJWT = (req, res, next) => {
-  const authorization = req.headers.authorization;
-  if (!authorization) {
-    return res.status(401).send({ error: true, message: 'unauthorized access' });
-  }
-  // bearer token
-  const token = authorization.split(' ')[1];
 
-  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
-    if (err) {
-      return res.status(401).send({ error: true, message: 'unauthorized access' })
-    }
-    req.decoded = decoded;
-    next();
-  })
-}
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.v94js04.mongodb.net/?retryWrites=true&w=majority`;
 
@@ -64,9 +47,10 @@ async function run() {
     const studentCollection = client.db('KalnaMadrasha').collection('students')
     const teacherCollection = client.db('KalnaMadrasha').collection('teachers')
     const committeeCollection = client.db('KalnaMadrasha').collection('committee')
+    const resultCollection = client.db('KalnaMadrasha').collection('results')
     const routineCollection = client.db('KalnaMadrasha').collection('routines')
 
-    // Post Sudent
+    // Post Sudent####################################################################
     app.post('/poststudent', upload.single('image'), async (req, res) => {
       const requestData = req.body;
       const imagePath = req.file.path;
@@ -82,12 +66,12 @@ async function run() {
         res.status(500).send('Failed to add student. Please try again.');
       }
     });
-    // get student
+    // get student############################################################################
     app.get('/students', async (req, res) => {
       const result = await studentCollection.find().toArray();
       res.send(result);
     });
-    // Delete student
+    // Delete student###################################################################
     app.delete('/students/:id', async (req, res) => {
       try {
         const id = req.params.id;
@@ -98,7 +82,7 @@ async function run() {
         res.status(200).send('Failed to delete student')
       }
     })
-    // Post Teacher
+    // Post Teacher#########################################################################
     app.post('/postteacher', upload.single('image'), async (req, res) => {
       const request = req.body;
       const imagePath = req.file.path;
@@ -111,7 +95,7 @@ async function run() {
         res.status(500).send('Failed to add teacher. Please try again.');
       }
     })
-    // Get teachers
+    // Get teachers##############################################################################
     app.get('/teachers', async (req, res) => {
       try {
         const result = await teacherCollection.find().toArray();
@@ -120,7 +104,7 @@ async function run() {
         res.status(200).send('Error to get teachers')
       }
     });
-    // Delete teacher
+    // Delete teacher##############################################################################
     app.delete('/teachers/:id', async (req, res) => {
       try {
         const id = req.params.id;
@@ -131,7 +115,7 @@ async function run() {
         res.status(200).send('Failed to delete Teacher')
       }
     });
-    // Post Committee
+    // Post Committee################################################################################
     app.post('/postcommittee', upload.single('image'), async (req, res) => {
       const request = req.body;
       const imagePath = req.file.path;
@@ -145,7 +129,7 @@ async function run() {
       }
     });
 
-    // Get committee
+    // Get committee#####################################################################################
     app.get('/committes', async (req, res) => {
       try {
         const result = await committeeCollection.find().toArray();
@@ -154,7 +138,7 @@ async function run() {
         res.status(200).send('Error to get committees')
       }
     });
-    // Delete teacher
+    // Delete teacher##############################################################################
     app.delete('/committes/:id', async (req, res) => {
       try {
         const id = req.params.id;
@@ -165,6 +149,8 @@ async function run() {
         res.status(200).send('Failed to delete Committe')
       }
     });
+
+    // Post Routine#################################################################################
 
     app.post('/postroutine', upload.single('image'), async (req, res) => {
       try {
@@ -190,7 +176,43 @@ async function run() {
         res.status(500).json({ error: 'Internal Server Error' });
       }
     });
-    // get image from database to show cliet side
+
+    // Post Result ############################################################################
+    app.post('/postresult',upload.single('pdf'), async(req,res)=>{
+      const request=req.body;
+      const filePath=req.file.path;
+      const resultData={...request,filePath}
+      try {
+        const result=await resultCollection.insertOne(resultData);
+        res.send(result);
+      } catch (error) {
+        console.error('Error adding result:', error);
+      }
+    });
+
+    app.get('/results', async (req,res)=>{
+      try {
+        const result= await resultCollection.find().toArray();
+      res.send(result)
+      } catch (error) {
+        res.status(500).json({ error: 'Internal Server Error' });
+      }
+    });
+
+    app.delete('/results/:id', async(req,res)=>{
+      try {
+        const id=req.params.id;
+        const deleteQuery={_id: new ObjectId(id)};
+        const result= await resultCollection.deleteOne(deleteQuery);
+        res.status(200,'ok').send(result)
+
+      } catch (error) {
+        res.send('Delete incomplete:',error)
+      }
+    })
+
+    
+    // get image from database to show cliet side ###################################################
     app.get('/getimage', async (req, res) => {
       try {
         const imagePath = req.query.path;
