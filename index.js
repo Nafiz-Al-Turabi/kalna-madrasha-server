@@ -48,6 +48,7 @@ async function run() {
     const teacherCollection = client.db('KalnaMadrasha').collection('teachers')
     const committeeCollection = client.db('KalnaMadrasha').collection('committee')
     const resultCollection = client.db('KalnaMadrasha').collection('results')
+    const noticeCollection = client.db('KalnaMadrasha').collection('notices')
     const routineCollection = client.db('KalnaMadrasha').collection('routines')
 
     // Post Sudent####################################################################
@@ -146,7 +147,7 @@ async function run() {
         const result = await committeeCollection.deleteOne(deleteQuery);
         res.send(result)
       } catch (error) {
-        res.status(200).send('Failed to delete Committe')
+        res.send('Failed to delete Committe')
       }
     });
 
@@ -176,42 +177,76 @@ async function run() {
         res.status(500).json({ error: 'Internal Server Error' });
       }
     });
-
-    // Post Result ############################################################################
-    app.post('/postresult',upload.single('pdf'), async(req,res)=>{
+    // Post Notice ##########################################################################
+    app.post('/postnotice', upload.single('file'), async (req, res) => {
       const request=req.body;
       const filePath=req.file.path;
-      const resultData={...request,filePath}
+      const noticeData={...request,filePath}
       try {
-        const result=await resultCollection.insertOne(resultData);
+        const result =await noticeCollection.insertOne(noticeData);
+        console.log(result)
+        res.send(result)
+      } catch (error) {
+        console.error('Error uploading image:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+      }
+    });
+
+    app.get('/notices',async(req,res)=>{
+      try {
+        const notices=await noticeCollection.find().toArray();
+        res.send(notices)
+      } catch (error) {
+        res.send('Err to ger notices',error)
+      }
+    });
+
+    app.delete('/notices/:id',async(req,res)=>{
+      try {
+        const id =req.params.id;
+        const deleteQuery=({_id: new ObjectId(id)})
+        const result= await noticeCollection.deleteOne(deleteQuery);
+        res.send(result)
+      } catch (error) {
+        res.send('Delete Incomplete:',error)
+      }
+    })
+
+    // Post Result ############################################################################
+    app.post('/postresult', upload.single('pdf'), async (req, res) => {
+      const request = req.body;
+      const filePath = req.file.path;
+      const resultData = { ...request, filePath }
+      try {
+        const result = await resultCollection.insertOne(resultData);
         res.send(result);
       } catch (error) {
         console.error('Error adding result:', error);
       }
     });
 
-    app.get('/results', async (req,res)=>{
+    app.get('/results', async (req, res) => {
       try {
-        const result= await resultCollection.find().toArray();
-      res.send(result)
+        const result = await resultCollection.find().toArray();
+        res.send(result)
       } catch (error) {
         res.status(500).json({ error: 'Internal Server Error' });
       }
     });
 
-    app.delete('/results/:id', async(req,res)=>{
+    app.delete('/results/:id', async (req, res) => {
       try {
-        const id=req.params.id;
-        const deleteQuery={_id: new ObjectId(id)};
-        const result= await resultCollection.deleteOne(deleteQuery);
-        res.status(200,'ok').send(result)
+        const id = req.params.id;
+        const deleteQuery = { _id: new ObjectId(id) };
+        const result = await resultCollection.deleteOne(deleteQuery);
+        res.status(200, 'ok').send(result)
 
       } catch (error) {
-        res.send('Delete incomplete:',error)
+        res.send('Delete incomplete:', error)
       }
     })
 
-    
+
     // get image from database to show cliet side ###################################################
     app.get('/getimage', async (req, res) => {
       try {
