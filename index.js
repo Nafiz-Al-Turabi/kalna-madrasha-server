@@ -113,7 +113,7 @@ async function run() {
         const result = await teacherCollection.deleteOne(deleteQuery);
         res.send(result)
       } catch (error) {
-        res.status(200).send('Failed to delete Teacher')
+        res.status(500).send('Failed to delete Teacher')
       }
     });
     // Post Committee################################################################################
@@ -153,37 +153,47 @@ async function run() {
 
     // Post Routine#################################################################################
 
-    app.post('/postroutine', upload.single('image'), async (req, res) => {
-      try {
-        const file = req.file;
+    app.post('/postroutine', upload.single('pdf'), async (req, res) => {
+      const request = req.body;
+      const filePath = req.file.path;
+      const routineData = { ...request, filePath };
 
-        const result = await routineCollection.insertOne({
-          filename: file.filename,
-          path: file.path,
-        });
-        res.json({ success: true, message: 'Image uploaded successfully', fileId: result.insertedId });
+      try {
+        const result = await routineCollection.insertOne(routineData);
+        res.send(result);
       } catch (error) {
-        console.error('Error uploading image:', error);
-        res.status(500).json({ error: 'Internal Server Error' });
+        res.status(500).json({ error: 'Error posting routine', details: error.message });
       }
     });
+
 
     app.get('/routines', async (req, res) => {
       try {
         const routines = await routineCollection.find().toArray();
-        res.json(routines);
+        res.send(routines);
       } catch (error) {
         console.error('Error retrieving routines:', error);
         res.status(500).json({ error: 'Internal Server Error' });
       }
     });
+
+    app.delete('/routines/:id', async (req, res) => {
+      try {
+        const id = req.params.id;
+        const deleteQuery = { _id: new ObjectId(id) };
+        const result= await routineCollection.deleteOne(deleteQuery);
+        res.send(result)
+      } catch (error) {
+        res.send('failed to delete Routine :',error.message)
+      }
+    })
     // Post Notice ##########################################################################
     app.post('/postnotice', upload.single('file'), async (req, res) => {
-      const request=req.body;
-      const filePath=req.file.path;
-      const noticeData={...request,filePath}
+      const request = req.body;
+      const filePath = req.file.path;
+      const noticeData = { ...request, filePath }
       try {
-        const result =await noticeCollection.insertOne(noticeData);
+        const result = await noticeCollection.insertOne(noticeData);
         console.log(result)
         res.send(result)
       } catch (error) {
@@ -192,23 +202,23 @@ async function run() {
       }
     });
 
-    app.get('/notices',async(req,res)=>{
+    app.get('/notices', async (req, res) => {
       try {
-        const notices=await noticeCollection.find().toArray();
+        const notices = await noticeCollection.find().toArray();
         res.send(notices)
       } catch (error) {
-        res.send('Err to ger notices',error)
+        res.send('Err to ger notices', error)
       }
     });
 
-    app.delete('/notices/:id',async(req,res)=>{
+    app.delete('/notices/:id', async (req, res) => {
       try {
-        const id =req.params.id;
-        const deleteQuery=({_id: new ObjectId(id)})
-        const result= await noticeCollection.deleteOne(deleteQuery);
+        const id = req.params.id;
+        const deleteQuery = ({ _id: new ObjectId(id) })
+        const result = await noticeCollection.deleteOne(deleteQuery);
         res.send(result)
       } catch (error) {
-        res.send('Delete Incomplete:',error)
+        res.send('Delete Incomplete:', error)
       }
     })
 
