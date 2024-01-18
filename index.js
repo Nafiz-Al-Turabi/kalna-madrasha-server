@@ -50,6 +50,10 @@ async function run() {
     const resultCollection = client.db('KalnaMadrasha').collection('results')
     const noticeCollection = client.db('KalnaMadrasha').collection('notices')
     const routineCollection = client.db('KalnaMadrasha').collection('routines')
+    const newsCollection = client.db('KalnaMadrasha').collection('news')
+    const campusImageCollection = client.db('KalnaMadrasha').collection('campusimages')
+    const headlineCollection = client.db('KalnaMadrasha').collection('headline')
+    const ebookCollection = client.db('KalnaMadrasha').collection('ebooks')
 
     // Post Sudent####################################################################
     app.post('/poststudent', upload.single('image'), async (req, res) => {
@@ -102,7 +106,7 @@ async function run() {
         const result = await teacherCollection.find().toArray();
         res.send(result)
       } catch (error) {
-        res.status(200).send('Error to get teachers')
+        res.status(500).send('Error to get teachers')
       }
     });
     // Delete teacher##############################################################################
@@ -181,10 +185,10 @@ async function run() {
       try {
         const id = req.params.id;
         const deleteQuery = { _id: new ObjectId(id) };
-        const result= await routineCollection.deleteOne(deleteQuery);
+        const result = await routineCollection.deleteOne(deleteQuery);
         res.send(result)
       } catch (error) {
-        res.send('failed to delete Routine :',error.message)
+        res.send('failed to delete Routine :', error.message)
       }
     })
     // Post Notice ##########################################################################
@@ -194,7 +198,7 @@ async function run() {
       const noticeData = { ...request, filePath }
       try {
         const result = await noticeCollection.insertOne(noticeData);
-        console.log(result)
+        
         res.send(result)
       } catch (error) {
         console.error('Error uploading image:', error);
@@ -254,7 +258,147 @@ async function run() {
       } catch (error) {
         res.send('Delete incomplete:', error)
       }
+    });
+
+    // Post news #########################################################
+
+    app.post('/postnews', upload.single('image'), async (req, res) => {
+      const request = req.body;
+      const imagePath = req.file.path;
+      const newsData = { ...request, imagePath }
+      try {
+        const result = await newsCollection.insertOne(newsData);
+        res.send(result)
+      } catch (error) {
+        res.status(500).send('Failed to add news')
+      }
+    });
+
+    app.get('/news', async (req, res) => {
+      try {
+        const result = await newsCollection.find().toArray();
+        res.send(result);
+      } catch (error) {
+        res.status(500).send('Error to get News', error)
+      }
+    });
+
+    app.delete('/news/:id', async (req, res) => {
+      try {
+        const id = req.params.id;
+        const deleteQuery = { _id: new ObjectId(id) }
+        const result = await newsCollection.deleteOne(deleteQuery);
+        res.send(result);
+      } catch (error) {
+        res.status(500).send('Error to Delete News', error)
+      }
+    });
+
+    //Others ######################################################
+
+    app.post('/postcampusimage', upload.single('image'), async (req, res) => {
+      const imagePath = req.file.path;
+      const campusImageData = { imagePath };
+      try {
+        const result = await campusImageCollection.insertOne(campusImageData);
+        res.send(result);
+      } catch (error) {
+        res.status(500).send('Failed to post campus Image:', error)
+      }
+    });
+
+    app.get('/campusimages', async (req, res) => {
+      try {
+        const result = await campusImageCollection.find().toArray();
+        res.send(result);
+      } catch (error) {
+        res.status(500).send('Failed to get campus Image:', error)
+      }
+    });
+    app.delete('/campusimages/:id', async (req, res) => {
+      try {
+        const id = req.params.id;
+        const deleteQuery = { _id: new ObjectId(id) };
+        const result = await campusImageCollection.deleteOne(deleteQuery);
+        res.send(result);
+      } catch (error) {
+        res.status(500).send('Failed to get campus Image:', error)
+      }
+    });
+
+    // Headline in Other option############################################################
+
+    app.post('/headline', upload.none(), async (req, res) => {
+      const request = req.body;
+      const headlineData = { ...request }
+      try {
+        const result = await headlineCollection.insertOne(headlineData);
+        res.send(result)
+        
+      } catch (error) {
+        res.status(500).send('Failed to get post headline:', error)
+      }
+    });
+
+    app.get('/headline', async (req, res) => {
+      try {
+        const result = await headlineCollection.find().toArray();
+        res.send(result)
+      } catch (error) {
+        res.send('Error to fetch headline', error)
+      }
+    });
+    app.delete('/headline/:id', async (req, res) => {
+      try {
+        const id = req.params.id;
+        const deleteQuery = { _id: new ObjectId(id) };
+        const result = await headlineCollection.deleteOne(deleteQuery)
+        res.send(result);
+      } catch (error) {
+        console.log('Failed to delete headline:', error)
+      }
     })
+    // Ebooks ###################################################
+    app.post('/ebook', upload.fields([{ name: 'imageEbook' }, { name: 'pdf' }]), async (req, res) => {
+      const request = req.body;
+
+      if (!req.files || Object.keys(req.files).length === 0) {
+        return res.status(400).send('No files were uploaded.');
+      }
+
+      const imagePath = req.files['imageEbook'][0].path;
+      const filePath = req.files['pdf'][0].path;
+      const ebookData = { ...request, imagePath, filePath };
+
+      try {
+        const result = await ebookCollection.insertOne(ebookData);
+        res.send(result);
+        ;
+      } catch (error) {
+        res.status(500).send('Failed to post Ebook:', error);
+      }
+    });
+
+    app.get('/ebooks',async(req,res)=>{
+      try {
+        const result= await ebookCollection.find().toArray();
+        res.send(result);
+      } catch (error) {
+        res.send('Failed to get ebooks:',error)
+      }
+    });
+
+    app.delete('/ebooks/:id',async(req,res)=>{
+      try {
+        const id= req.params.id;
+        const deleteQuery= {_id: new ObjectId(id)};
+        const result= await ebookCollection.deleteOne(deleteQuery);
+        res.send(result);
+      } catch (error) {
+        res.send('failed to delete:',error)
+      }
+    })
+
 
 
     // get image from database to show cliet side ###################################################
