@@ -6,15 +6,29 @@ const cors = require('cors');
 require('dotenv').config()
 const multer = require('multer');
 const path = require('path')
-const fs = require('fs')
-
-
-
-
+const fs = require('fs');
+const bcrypt = require('bcrypt');
 app.use(cors())
 app.use(express.json())
 
+// Middleware to verify JWT token
+function verifyToken(req, res, next) {
+  const token = req.headers.authorization;
 
+  if (!token) {
+    return res.status(401).json({ message: 'Access denied. No token provided.' });
+  }
+
+  try {
+    // Verify token
+    const decoded = jwt.verify(token, jwtSecretKey);
+    req.user = decoded;
+    next();
+  } catch (error) {
+    console.error('Error verifying token:', error);
+    return res.status(403).json({ message: 'Invalid token' });
+  }
+}
 
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.v94js04.mongodb.net/?retryWrites=true&w=majority`;
@@ -54,6 +68,79 @@ async function run() {
     const campusImageCollection = client.db('KalnaMadrasha').collection('campusimages')
     const headlineCollection = client.db('KalnaMadrasha').collection('headline')
     const ebookCollection = client.db('KalnaMadrasha').collection('ebooks')
+    const syllabusCollection = client.db('KalnaMadrasha').collection('syllabuses')
+    const rouineCollection = client.db('KalnaMadrasha').collection('rouines');
+
+    // SignUp and signIn **********************************************************************
+    const userCollection = client.db('KalnaMadrasha').collection('users');
+
+    app.post('/signup', async (req, res) => {
+      try {
+        const { username, email, password } = req.body;
+
+        // Check if user already exists
+        const existingUser = await userCollection.findOne({ email });
+        if (existingUser) {
+          return res.status(400).json({ message: 'User already exists' });
+        }
+
+        // Hash the password
+        const hashPassword = await bcrypt.hash(password, 10);
+
+        // Create new user object
+        const newUser = {
+          username,
+          email,
+          password: hashPassword,
+          isAdmin: false,
+        };
+
+        // Insert the user object into the database
+        await userCollection.insertOne(newUser);
+
+        return res.status(201).json({ message: 'User registered successfully' });
+      } catch (error) {
+        console.error('Error occurred during signup:', error);
+        return res.status(500).json({ message: 'Internal server error' });
+      }
+    });
+
+    const jwt = require('jsonwebtoken');
+    const jwtSecretKey = process.env.ACCESS_TOKEN;
+
+    app.post('/login', async (req, res) => {
+      try {
+        const { email, password } = req.body;
+
+        // Find user by email
+        const user = await userCollection.findOne({ email });
+        if (!user) {
+          return res.status(400).json({ message: 'User not found' });
+        }
+
+        // Compare the provided password with the hashed password stored in the database
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+        if (!isPasswordValid) {
+          return res.status(401).json({ message: 'Invalid password' });
+        }
+
+        // Generate JWT token with user ID and email
+        const token = jwt.sign({ userId: user._id, email: user.email }, jwtSecretKey, { expiresIn: '10s' });
+
+        // Send JWT token in response
+        return res.status(200).json({ message: 'Login successful', token });
+      } catch (error) {
+        console.error('Error occurred during login:', error);
+        return res.status(500).json({ message: 'Internal server error' });
+      }
+    });
+
+    // Protected route: Only accessible with a valid JWT token
+    app.get('/admin/dashboard', verifyToken, (req, res) => {
+      // Route logic goes here
+      res.status(200).json({ message: 'Welcome to the admin dashboard' });
+    });
+    // SignUp and signIn end ******************************************************************
 
     // Post Sudent####################################################################
     app.post('/poststudent', upload.single('image'), async (req, res) => {
@@ -198,7 +285,7 @@ async function run() {
       const noticeData = { ...request, filePath }
       try {
         const result = await noticeCollection.insertOne(noticeData);
-        
+
         res.send(result)
       } catch (error) {
         console.error('Error uploading image:', error);
@@ -334,7 +421,7 @@ async function run() {
       try {
         const result = await headlineCollection.insertOne(headlineData);
         res.send(result)
-        
+
       } catch (error) {
         res.status(500).send('Failed to get post headline:', error)
       }
@@ -379,29 +466,95 @@ async function run() {
       }
     });
 
-    app.get('/ebooks',async(req,res)=>{
+    app.get('/ebooks', async (req, res) => {
       try {
-        const result= await ebookCollection.find().toArray();
+        const result = await ebookCollection.find().toArray();
         res.send(result);
       } catch (error) {
-        res.send('Failed to get ebooks:',error)
+        res.send('Failed to get ebooks:', error)
       }
     });
 
-    app.delete('/ebooks/:id',async(req,res)=>{
+    app.delete('/ebooks/:id', async (req, res) => {
       try {
-        const id= req.params.id;
-        const deleteQuery= {_id: new ObjectId(id)};
-        const result= await ebookCollection.deleteOne(deleteQuery);
+        const id = req.params.id;
+        const deleteQuery = { _id: new ObjectId(id) };
+        const result = await ebookCollection.deleteOne(deleteQuery);
         res.send(result);
       } catch (error) {
-        res.send('failed to delete:',error)
+        res.send('failed to delete:', error)
       }
-    })
+    });
+
+    // syllabus #######################################################################################
+    app.post('/postsyllabus', upload.single('image'), async (req, res) => {
+      const request = req.body;
+      const imagePath = req.file.path;
+      const syllabusData = { ...request, imagePath }
+      try {
+        const result = await syllabusCollection.insertOne(syllabusData);
+        res.send(result)
+      } catch (error) {
+        res.status(500).send('Failed to add syllabus')
+      }
+    });
+
+    app.get('/syllabuses', async (req, res) => {
+      try {
+        const result = await syllabusCollection.find().toArray();
+        res.send(result);
+      } catch (error) {
+        res.status(500).send('Error to get syllabuses', error)
+      }
+    });
+
+    app.delete('/syllabuses/:id', async (req, res) => {
+      try {
+        const id = req.params.id;
+        const deleteQuery = { _id: new ObjectId(id) }
+        const result = await syllabusCollection.deleteOne(deleteQuery);
+        res.send(result);
+      } catch (error) {
+        res.status(500).send('Error to Delete syllabuses', error)
+      }
+    });
+
+    // Routine #####################################################################################
+    app.post('/postroutine', upload.single('image'), async (req, res) => {
+      const request = req.body;
+      const imagePath = req.file.path;
+      const routineData = { ...request, imagePath }
+      try {
+        const result = await routineCollection.insertOne(routineData);
+        res.send(result)
+      } catch (error) {
+        res.status(500).send('Failed to add routine')
+      }
+    });
+
+    app.get('/routines', async (req, res) => {
+      try {
+        const result = await routineCollection.find().toArray();
+        res.send(result);
+      } catch (error) {
+        res.status(500).send('Error to get routines', error)
+      }
+    });
+
+    app.delete('/routines/:id', async (req, res) => {
+      try {
+        const id = req.params.id;
+        const deleteQuery = { _id: new ObjectId(id) }
+        const result = await routineCollection.deleteOne(deleteQuery);
+        res.send(result);
+      } catch (error) {
+        res.status(500).send('Error to Delete routine', error)
+      }
+    });
 
 
 
-    // get image from database to show cliet side ###################################################
+    // get image/file from database to show cliet side ###################################################
     app.get('/getimage', async (req, res) => {
       try {
         const imagePath = req.query.path;
