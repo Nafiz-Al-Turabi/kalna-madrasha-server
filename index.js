@@ -69,7 +69,7 @@ async function run() {
     const headlineCollection = client.db('KalnaMadrasha').collection('headline')
     const ebookCollection = client.db('KalnaMadrasha').collection('ebooks')
     const syllabusCollection = client.db('KalnaMadrasha').collection('syllabuses')
-    const rouineCollection = client.db('KalnaMadrasha').collection('rouines');
+    const lillahBoardingImageCollection = client.db('KalnaMadrasha').collection('lillahboardingimages');
 
     // SignUp and signIn **********************************************************************
     const userCollection = client.db('KalnaMadrasha').collection('users');
@@ -125,7 +125,7 @@ async function run() {
         }
 
         // Generate JWT token with user ID and email
-        const token = jwt.sign({ userId: user._id, email: user.email }, jwtSecretKey, { expiresIn: '10s' });
+        const token = jwt.sign({ userId: user._id, email: user.email }, jwtSecretKey, { expiresIn: '1h' });
 
         // Send JWT token in response
         return res.status(200).json({ message: 'Login successful', token });
@@ -311,6 +311,13 @@ async function run() {
       } catch (error) {
         res.send('Delete Incomplete:', error)
       }
+    });
+
+    app.get('/noticeDtails/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await noticeCollection.findOne(query)
+      res.send(result)
     })
 
     // Post Result ############################################################################
@@ -380,6 +387,13 @@ async function run() {
         res.status(500).send('Error to Delete News', error)
       }
     });
+
+    app.get('/newsDetails/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await newsCollection.findOne(query)
+      res.send(result)
+    })
 
     //Others ######################################################
 
@@ -487,7 +501,7 @@ async function run() {
     });
 
     // syllabus #######################################################################################
-    app.post('/postsyllabus', upload.single('image'), async (req, res) => {
+    app.post('/postsyllabus', upload.single('pdf'), async (req, res) => {
       const request = req.body;
       const imagePath = req.file.path;
       const syllabusData = { ...request, imagePath }
@@ -518,6 +532,38 @@ async function run() {
         res.status(500).send('Error to Delete syllabuses', error)
       }
     });
+
+    // Lillah Boarding ##################################################################################
+    app.post('/postlillahBoardingimage', upload.single('image'), async (req, res) => {
+      const imagePath = req.file.path;
+      const lillahBoardingImageData = { imagePath };
+      try {
+        const result = await lillahBoardingImageCollection.insertOne(lillahBoardingImageData);
+        res.send(result);
+      } catch (error) {
+        res.status(500).send('Failed to post lillahBoarding Image:', error)
+      }
+    });
+
+    app.get('/lillahBoardingimages', async (req, res) => {
+      try {
+        const result = await lillahBoardingImageCollection.find().toArray();
+        res.send(result);
+      } catch (error) {
+        res.status(500).send('Failed to get lillahBoarding Image:', error)
+      }
+    });
+    app.delete('/lillahBoardingimages/:id', async (req, res) => {
+      try {
+        const id = req.params.id;
+        const deleteQuery = { _id: new ObjectId(id) };
+        const result = await lillahBoardingImageCollection.deleteOne(deleteQuery);
+        res.send(result);
+      } catch (error) {
+        res.status(500).send('Failed to get lillahBoarding Image:', error)
+      }
+    });
+    // Lillah Boarding ##################################################################################
 
     // Routine #####################################################################################
     app.post('/postroutine', upload.single('image'), async (req, res) => {
