@@ -31,7 +31,9 @@ function verifyToken(req, res, next) {
 }
 
 
-const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.v94js04.mongodb.net/?retryWrites=true&w=majority`;
+// const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.v94js04.mongodb.net/?retryWrites=true&w=majority`;
+
+const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.pviqyfq.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
@@ -70,6 +72,7 @@ async function run() {
     const ebookCollection = client.db('KalnaMadrasha').collection('ebooks')
     const syllabusCollection = client.db('KalnaMadrasha').collection('syllabuses')
     const lillahBoardingImageCollection = client.db('KalnaMadrasha').collection('lillahboardingimages');
+    const contactCollection = client.db('KalnaMadrasha').collection('contacts');
 
     // SignUp and signIn **********************************************************************
     const userCollection = client.db('KalnaMadrasha').collection('users');
@@ -92,7 +95,7 @@ async function run() {
           username,
           email,
           password: hashPassword,
-          isAdmin: false,
+          isAdmin: true,
         };
 
         // Insert the user object into the database
@@ -135,11 +138,6 @@ async function run() {
       }
     });
 
-    // Protected route: Only accessible with a valid JWT token
-    app.get('/admin/dashboard', verifyToken, (req, res) => {
-      // Route logic goes here
-      res.status(200).json({ message: 'Welcome to the admin dashboard' });
-    });
     // SignUp and signIn end ******************************************************************
 
     // Post Sudent####################################################################
@@ -597,6 +595,42 @@ async function run() {
         res.status(500).send('Error to Delete routine', error)
       }
     });
+    // ####################################################################
+    app.post('/postcontact', async (req, res) => {
+      const contact = req.body;
+      try {
+        const result = await contactCollection.insertOne(contact);
+        res.send(result)
+      } catch (error) {
+        console.error('Error saving contact:', error);
+        res.status(500).send('Error saving contact');
+      }
+    });
+
+    // GET request to retrieve all contacts
+    app.get('/contacts', async (req, res) => {
+      try {
+        const contacts = await contactCollection.find().toArray();
+        res.send(contacts);
+      } catch (error) {
+        console.error('Error fetching contacts:', error);
+        res.status(500).send('Error fetching contacts');
+      }
+    });
+
+    // DELETE request to delete a contact by ID
+    app.delete('/contacts/:id', async (req, res) => {
+      try {
+        const id = req.params.id;
+        const deleteQuery = { _id: new ObjectId(id) }
+        const result = await contactCollection.deleteOne(deleteQuery);
+        res.send(result);
+      } catch (error) {
+        console.error('Error deleting contact:', error);
+        res.status(500).send('Error deleting contact');
+      }
+    });
+    // ####################################################################
 
 
 
