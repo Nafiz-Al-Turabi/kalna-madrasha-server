@@ -95,7 +95,7 @@ async function run() {
           username,
           email,
           password: hashPassword,
-          isAdmin: true,
+          isAdmin: false,
         };
 
         // Insert the user object into the database
